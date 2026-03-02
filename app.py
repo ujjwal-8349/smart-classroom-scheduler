@@ -139,3 +139,9 @@ if login_btn:
 
         else:
             st.error("Invalid Username or Password ❌")
+
+
+role = st.session_state.get("role")
+
+if role == "Student":
+    st.session_state.hide_admin = True

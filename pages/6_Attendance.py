@@ -4,6 +4,14 @@ from database import (
     get_students,
     get_subject_names
 )
+from auth_guard import check_login
+check_login()
+
+import streamlit as st
+
+if st.session_state.get("role") != "Faculty":
+    st.warning("Only Faculty Allowed ❌")
+    st.stop()
 
 st.title("📋 Mark Attendance")
 

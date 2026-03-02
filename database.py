@@ -151,10 +151,20 @@ def add_faculty(name, department, subject):
     conn = create_connection()
     cursor = conn.cursor()
 
+    # Add faculty record
     cursor.execute("""
         INSERT INTO faculty(name, department, subject)
         VALUES(%s,%s,%s)
     """,(name, department, subject))
+
+    # Create login automatically
+    username = name.lower().replace(" ", "")
+    password = "fac123"
+
+    cursor.execute("""
+        INSERT INTO users(username,password,role)
+        VALUES(%s,%s,%s)
+    """,(username, password, "Faculty"))
 
     conn.commit()
     conn.close()

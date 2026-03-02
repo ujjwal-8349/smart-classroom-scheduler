@@ -2,6 +2,14 @@ import streamlit as st
 from database import add_classroom, get_classroom_count
 from theme import apply_theme
 apply_theme()
+from auth_guard import check_login
+check_login()
+
+import streamlit as st
+
+if st.session_state.get("role") != "Admin":
+    st.warning("Access Denied ❌")
+    st.stop()
 
 st.title("🏫 Classroom Management")
 
