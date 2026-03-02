@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import random
 import time
+from theme import apply_theme
+apply_theme()
 
 from database import (
     save_safe_timetable,

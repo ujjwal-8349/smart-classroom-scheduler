@@ -2,6 +2,8 @@ import streamlit as st
 from database import add_faculty, get_faculty_count, add_user
 from auth_guard import check_login
 check_login("Admin")
+from theme import apply_theme
+apply_theme()
 
 st.title("👨‍🏫 Faculty Management")
 

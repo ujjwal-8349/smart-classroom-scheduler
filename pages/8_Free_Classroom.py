@@ -4,6 +4,8 @@ from database import (
     get_timeslots,
     get_free_classrooms
 )
+from theme import apply_theme
+apply_theme()
 
 st.set_page_config(layout="wide")
 

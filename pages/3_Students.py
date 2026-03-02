@@ -8,6 +8,8 @@ from database import (
 )
 from auth_guard import check_login
 check_login()
+from theme import apply_theme
+apply_theme()
 
 st.title("👨‍🎓 Students")
 
