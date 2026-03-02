@@ -7,7 +7,7 @@ from database import (
     get_low_attendance
 )
 from auth_guard import check_login
-check_login()
+check_login(["Admin","Faculty","Student"])
 from theme import apply_theme
 apply_theme()
 
@@ -51,18 +51,36 @@ elif st.session_state.get("role") == "Student":
         st.write(row)
 
     # -------- Attendance Alert --------
-    st.divider()
-    st.subheader("⚠️ Attendance Alerts")
+    import plotly.express as px
+from database import get_student_attendance_percentage
 
-    low = get_low_attendance(username)
+st.divider()
+st.subheader("📊 My Attendance")
 
-    if low:
-        for sub, percent in low:
-            st.warning(
-                f"{sub} attendance low ({percent:.1f}%)"
-            )
-    else:
-        st.success("✅ Attendance Safe")
+username = st.session_state.get("username")
+
+attendance = get_student_attendance_percentage(username)
+
+if attendance:
+
+    subjects = [a[0] for a in attendance]
+    percent = [a[1] for a in attendance]
+
+    import pandas as pd
+
+    df = pd.DataFrame({
+        "Subject": subjects,
+        "Attendance %": percent
+    })
+
+    fig = px.bar(
+        df,
+        x="Subject",
+        y="Attendance %",
+        title="My Attendance Percentage"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.warning("Login again")
+    st.info("No attendance data available")

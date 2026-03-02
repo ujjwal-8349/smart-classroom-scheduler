@@ -1,6 +1,8 @@
 import streamlit as st
 from database import add_subject, get_subjects
 from database import get_low_attendance
+from auth_guard import check_login
+check_login(["Admin","Faculty"])
 
 st.title("📘 Subject Management")
 

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from auth_guard import check_login
-check_login("Admin")
+check_login(["Admin","Faculty","Student"])
 from theme import apply_theme
 apply_theme()
 

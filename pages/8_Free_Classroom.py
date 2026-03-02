@@ -6,6 +6,8 @@ from database import (
 )
 from theme import apply_theme
 apply_theme()
+from auth_guard import check_login
+check_login(["Faculty","Student"])
 
 st.set_page_config(layout="wide")
 

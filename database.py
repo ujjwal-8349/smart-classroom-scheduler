@@ -135,7 +135,7 @@ def get_user(username, password, role):
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT * FROM users WHERE username=%s AND password=%s AND role=?",
+        "SELECT * FROM users WHERE username=%s AND password=%s AND role=%s",
         (username, password, role)
     )
 
@@ -196,6 +196,98 @@ def get_faculty_by_department():
     data = cursor.fetchall()
     conn.close()
     return data
+
+# New Features
+def update_faculty(id, name, department, subject):
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE faculty
+        SET name=%s, department=%s, subject=%s
+        WHERE id=%s
+    """,(name, department, subject, id))
+
+    conn.commit()
+    conn.close()
+
+
+def delete_student(id):
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM students WHERE id=%s",
+        (id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+def update_subject(id, name, department, type, faculty):
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE subjects
+        SET name=%s,
+            department=%s,
+            type=%s,
+            faculty=%s
+        WHERE id=%s
+    """,(name, department, type, faculty, id))
+
+    conn.commit()
+    conn.close()
+
+def update_subject(id, name, department, type, faculty):
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE subjects
+        SET name=%s,
+            department=%s,
+            type=%s,
+            faculty=%s
+        WHERE id=%s
+    """,(name, department, type, faculty, id))
+
+    conn.commit()
+    conn.close()
+
+def get_all_faculty():
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, name, department, subject
+        FROM faculty
+    """)
+
+    data = cursor.fetchall()
+    conn.close()
+
+    return data
+
+def delete_faculty(id):
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM faculty WHERE id=%s",
+        (id,)
+    )
+
+    conn.commit()
+    conn.close()
+
 
 # ---------------- STUDENTS ----------------
 def add_student(name, department):
@@ -268,7 +360,7 @@ def get_classrooms_by_type(room_type):
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT room FROM classrooms WHERE type=?",
+        "SELECT room FROM classrooms WHERE type=%s",
         (room_type,)
     )
 
@@ -353,12 +445,23 @@ def get_timetable():
     conn = create_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT day, slot, subject, faculty, room, department FROM timetable"
-    )
+    cursor.execute("""
+        SELECT day, slot, subject, faculty, room
+        FROM timetable
+        ORDER BY
+        CASE day
+            WHEN 'Monday' THEN 1
+            WHEN 'Tuesday' THEN 2
+            WHEN 'Wednesday' THEN 3
+            WHEN 'Thursday' THEN 4
+            WHEN 'Friday' THEN 5
+        END,
+        slot
+    """)
 
     data = cursor.fetchall()
     conn.close()
+
     return data
 
 
@@ -368,7 +471,7 @@ def get_student_timetable(department):
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT day, slot, subject, room FROM timetable WHERE department=?",
+        "SELECT day, slot, subject, room FROM timetable WHERE department=%s",
         (department,)
     )
 
@@ -412,22 +515,14 @@ def mark_attendance(student, subject, status):
     cursor = conn.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS attendance(
-            id SERIAL PRIMARY KEY,
-            student TEXT,
-            subject TEXT,
-            status TEXT
-        )
-    """)
-
-    cursor.execute(
-        "INSERT INTO attendance(student,subject,status) VALUES(%s,%s,%s)"
-        (student, subject, status)
-    )
+        INSERT INTO attendance(student,subject,status)
+        VALUES(%s,%s,%s)
+    """, (student, subject, status))
 
     conn.commit()
     conn.close()
 
+    
 
 def get_attendance(student):
 
@@ -439,7 +534,7 @@ def get_attendance(student):
         COUNT(*) as total,
         SUM(CASE WHEN status='Present' THEN 1 ELSE 0 END)
         FROM attendance
-        WHERE student=?
+        WHERE student=%s
         GROUP BY subject
     """, (student,))
 
@@ -489,7 +584,7 @@ def is_slot_available(day, slot, faculty, room):
     # Faculty clash
     cursor.execute("""
         SELECT * FROM timetable
-        WHERE day=? AND slot=? AND faculty=?
+        WHERE day=%s AND slot=%s AND faculty=%s
     """, (day, slot, faculty))
 
     faculty_busy = cursor.fetchone()
@@ -497,7 +592,7 @@ def is_slot_available(day, slot, faculty, room):
     # Room clash
     cursor.execute("""
         SELECT * FROM timetable
-        WHERE day=? AND slot=? AND room=?
+        WHERE day=%s AND slot=%s AND room=%s
     """, (day, slot, room))
 
     room_busy = cursor.fetchone()
@@ -597,7 +692,7 @@ def get_free_classrooms(day, slot):
     # occupied rooms
     cursor.execute("""
         SELECT room FROM timetable
-        WHERE day=? AND slot=?
+        WHERE day=%s AND slot=%s
     """,(day,slot))
 
     occupied = [r[0] for r in cursor.fetchall()]
@@ -626,7 +721,7 @@ def get_low_attendance(student):
         COUNT(*) as total,
         SUM(CASE WHEN status='Present' THEN 1 ELSE 0 END)
         FROM attendance
-        WHERE student=?
+        WHERE student=%s
         GROUP BY subject
     """,(student,))
 
@@ -651,8 +746,8 @@ def update_timetable(id, subject, faculty, room):
 
     cursor.execute("""
         UPDATE timetable
-        SET subject=?, faculty=?, room=?
-        WHERE id=?
+        SET subject=%s, faculty=%s, room=%s
+        WHERE id=%s
     """, (subject, faculty, room, id))
 
     conn.commit()
@@ -671,7 +766,7 @@ def get_free_classrooms(day, slot):
     # Busy rooms
     cursor.execute("""
         SELECT room FROM timetable
-        WHERE day=? AND slot=?
+        WHERE day=%s AND slot=%s
     """, (day, slot))
 
     busy_rooms = {r[0] for r in cursor.fetchall()}
@@ -683,4 +778,29 @@ def get_free_classrooms(day, slot):
 
     return free_rooms
 
+
+def get_student_attendance_percentage(student):
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT subject,
+        COUNT(*) AS total,
+        SUM(CASE WHEN status='Present' THEN 1 ELSE 0 END)
+        FROM attendance
+        WHERE student=%s
+        GROUP BY subject
+    """, (student,))
+
+    data = cursor.fetchall()
+    conn.close()
+
+    result = []
+
+    for sub, total, present in data:
+        percent = (present / total) * 100 if total else 0
+        result.append((sub, percent))
+
+    return result
 

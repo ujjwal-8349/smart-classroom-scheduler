@@ -5,7 +5,7 @@ from database import (
     get_subject_names
 )
 from auth_guard import check_login
-check_login()
+check_login(["Admin","Faculty"])
 
 import streamlit as st
 
