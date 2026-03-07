@@ -19,13 +19,24 @@ apply_theme()
 st.title("👨‍🏫 Faculty Management")
 
 # ---------- ADD FACULTY ----------
-with st.form("faculty_form"):
+with st.container():
 
-    name = st.text_input("Faculty Name")
-    department = st.text_input("Department")
-    subject = st.text_input("Subject")
+    st.subheader("Add New Faculty")
+    st.caption("Create a faculty profile and auto-generate login credentials.")
 
-    submit = st.form_submit_button("Add Faculty")
+    with st.form("faculty_form"):
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            name = st.text_input("Faculty Name")
+            department = st.text_input("Department")
+
+        with col2:
+            subject = st.text_input("Subject")
+
+        st.markdown("<div style='margin-top: 0.5rem;'></div>", unsafe_allow_html=True)
+        submit = st.form_submit_button("Add Faculty")
 
 if submit:
 

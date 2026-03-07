@@ -149,24 +149,113 @@ def _render_timetable_grid(rows):
 
     # ---------- FILL DATA ----------
     for day, slot, subject, faculty, room in rows:
-        cell = f"<b>{subject}</b><br><span style='color:#2563eb;'>{faculty}</span><br>{room}"
-        table.loc[day, slot] = cell
+        cell_html = (
+            "<div class='tt-card tt-card--filled'>"
+            f"<div class='tt-subject'>{subject}</div>"
+            f"<div class='tt-meta'><span class='tt-meta-label'>Faculty</span> {faculty}</div>"
+            f"<div class='tt-meta'><span class='tt-meta-label'>Room</span> {room}</div>"
+            "</div>"
+        )
+        table.loc[day, slot] = cell_html
+
+    # ---------- MARK FREE SLOTS ----------
+    for d in days:
+        for s in slots:
+            if not str(table.loc[d, s]).strip():
+                table.loc[d, s] = (
+                    "<div class='tt-card tt-card--free'>"
+                    "<div class='tt-free-pill'>Free</div>"
+                    "<div class='tt-free-subtext'>No class scheduled</div>"
+                    "</div>"
+                )
 
     # ---------- DISPLAY (HTML grid for readability) ----------
     st.markdown(
         """
         <style>
-        .timetable-grid table { width: 100%; border-collapse: collapse; }
-        .timetable-grid th, .timetable-grid td {
-            border: 1px solid #e5e7eb;
-            padding: 10px;
-            vertical-align: top;
-            background: white;
-            min-width: 130px;
+        .timetable-grid table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8px;
         }
-        .timetable-grid th { background: #f3f4f6; text-align: center; }
-        .timetable-grid td { font-size: 14px; line-height: 1.25; }
-        .timetable-grid td:empty { background: #fafafa; }
+        .timetable-grid th, .timetable-grid td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+            min-width: 140px;
+        }
+        .timetable-grid th {
+            background: linear-gradient(135deg, #eff6ff, #e5e7eb);
+            text-align: center;
+            padding: 10px 6px;
+            font-size: 13px;
+            color: #111827;
+            border-radius: 12px;
+        }
+        .timetable-grid td {
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .tt-card {
+            border-radius: 14px;
+            padding: 10px 11px;
+            background: #ffffff;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+            min-height: 82px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .tt-card--filled:hover {
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+            border-color: rgba(37, 99, 235, 0.65);
+        }
+
+        .tt-subject {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .tt-meta {
+            font-size: 11px;
+            color: #6b7280;
+        }
+        .tt-meta-label {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 10px;
+            color: #9ca3af;
+            margin-right: 4px;
+        }
+
+        .tt-card--free {
+            background: radial-gradient(circle at top left, #ecfdf5 0, #f9fafb 40%, #ffffff 100%);
+            border: 1px dashed rgba(16, 185, 129, 0.75);
+            align-items: flex-start;
+        }
+        .tt-card--free:hover {
+            box-shadow: 0 18px 40px rgba(5, 150, 105, 0.25);
+        }
+        .tt-free-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .tt-free-subtext {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #6b7280;
+        }
         </style>
         """,
         unsafe_allow_html=True,
