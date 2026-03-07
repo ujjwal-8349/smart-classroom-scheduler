@@ -1,45 +1,60 @@
-import streamlit as st
+import bcrypt
 from database import create_connection
 
 
-# ---------------- LOGIN FUNCTION ----------------
+def hash_password(password):
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(password, stored_password):
+    try:
+        return bcrypt.checkpw(password.encode(), stored_password.encode())
+    except:
+        return password == stored_password
+
+
 def login_user(username, password, role):
 
-    conn = create_connection()
-    cursor = conn.cursor()
+    conn = None
 
-    # Check user credentials
-    cursor.execute(
-        """
-        SELECT * FROM users
-        WHERE username=%s AND password=%s AND role=%s
-        """,
-        (username, password, role)
-    )
+    try:
+        conn = create_connection()
+        cursor = conn.cursor()
 
-    user = cursor.fetchone()
+        cursor.execute(
+            """
+            SELECT id, username, password, role
+            FROM users
+            WHERE username=%s AND role=%s
+            """,
+            (username, role)
+        )
 
-    # ---------- STUDENT SESSION ----------
-    if user:
+        user = cursor.fetchone()
 
-        # ✅ SAVE LOGIN SESSION
-        st.session_state["logged_in"] = True
-        st.session_state["username"] = username
-        st.session_state["role"] = role
+        if not user:
+            return None
 
-        # student department
-        if role == "Student":
-            cursor.execute("""
-                SELECT department
-                FROM students
-                WHERE LOWER(REPLACE(name,' ',''))=%s
-            """, (username,))
+        user_id, db_username, stored_password, db_role = user
 
-            dept = cursor.fetchone()
+        if not verify_password(password, stored_password):
+            return None
 
-            if dept:
-                st.session_state["department"] = dept[0]
+        if stored_password and not stored_password.startswith("$2"):
+            new_hash = hash_password(password)
 
-    conn.close()
+            cursor.execute(
+                "UPDATE users SET password=%s WHERE id=%s",
+                (new_hash, user_id)
+            )
+            conn.commit()
 
-    return user
+        return user
+
+    except Exception as e:
+        print("Login error:", e)
+        return None
+
+    finally:
+        if conn:
+            conn.close()

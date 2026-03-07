@@ -1,6 +1,7 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
+import bcrypt
 
 # load .env variables
 load_dotenv()
@@ -8,6 +9,38 @@ load_dotenv()
 def _close_connection(conn):
     if conn:
         conn.close()
+
+def _is_bcrypt_hash(value) -> bool:
+    if not value or not isinstance(value, str):
+        return False
+    return value.startswith("$2a$") or value.startswith("$2b$") or value.startswith("$2y$")
+
+def hash_password(plain_password: str) -> str:
+    if plain_password is None:
+        plain_password = ""
+    pw_bytes = plain_password.encode("utf-8")
+    hashed = bcrypt.hashpw(pw_bytes, bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
+def verify_password(plain_password: str, stored_password: str) -> bool:
+    """
+    Verifies a plaintext password against a stored bcrypt hash.
+    If the stored value is not a bcrypt hash, falls back to direct string compare
+    (legacy support) so existing accounts keep working.
+    """
+    if plain_password is None:
+        plain_password = ""
+    if stored_password is None:
+        stored_password = ""
+
+    if _is_bcrypt_hash(stored_password):
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            stored_password.encode("utf-8"),
+        )
+
+    # Legacy plaintext passwords (existing DB rows)
+    return plain_password == stored_password
 
 # ---------------- CONNECTION ----------------
 def create_connection():
@@ -125,13 +158,14 @@ def insert_default_users():
         )
 
         if not cursor.fetchone():
+            hashed = hash_password("admin123")
 
             cursor.execute(
                 """
                 INSERT INTO users(username,password,role)
                 VALUES(%s,%s,%s)
                 """,
-                ("admin", "admin123", "Admin")
+                ("admin", hashed, "Admin")
             )
 
         conn.commit()
@@ -147,12 +181,25 @@ def get_user(username, password, role):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT * FROM users WHERE username=%s AND password=%s AND role=%s",
-            (username, password, role)
+            "SELECT id, username, password, role FROM users WHERE username=%s AND role=%s",
+            (username, role)
         )
-
         user = cursor.fetchone()
-        return user
+        if not user:
+            return None
+
+        stored_password = user[2]
+        if verify_password(password, stored_password):
+            # Auto-upgrade legacy plaintext passwords to bcrypt.
+            if not _is_bcrypt_hash(stored_password):
+                cursor.execute(
+                    "UPDATE users SET password=%s WHERE id=%s",
+                    (hash_password(password), user[0]),
+                )
+                conn.commit()
+            return user
+
+        return None
     finally:
         _close_connection(conn)
 
@@ -174,11 +221,12 @@ def add_faculty(name, department, subject):
         # Create login automatically
         username = name.lower().replace(" ", "")
         password = "fac123"
+        hashed = hash_password(password)
 
         cursor.execute("""
             INSERT INTO users(username,password,role)
             VALUES(%s,%s,%s)
-        """,(username, password, "Faculty"))
+        """,(username, hashed, "Faculty"))
 
         conn.commit()
     finally:
@@ -324,10 +372,11 @@ def add_student(name, department):
         # ---------- CREATE LOGIN ----------
         username = name.lower().replace(" ", "")
         password = "stu123"
+        hashed = hash_password(password)
 
         cursor.execute(
             "INSERT INTO users(username, password, role) VALUES(%s,%s,%s)",
-            (username, password, "Student")
+            (username, hashed, "Student")
         )
 
         conn.commit()
@@ -555,9 +604,10 @@ def add_user(username, password, role):
         conn = create_connection()
         cursor = conn.cursor()
 
+        hashed = hash_password(password)
         cursor.execute(
             "INSERT INTO users(username,password,role) VALUES(%s,%s,%s)",
-            (username, password, role)
+            (username, hashed, role)
         )
 
         conn.commit()
