@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+
 from database import (
     add_student,
     get_student_timetable,
-    get_low_attendance
+    get_student_attendance_percentage,
 )
 from auth_guard import check_login
-check_login(["Admin","Faculty","Student"])
 from theme import apply_theme
+
+check_login(["Admin", "Faculty", "Student"])
 apply_theme()
 
 st.title("👨‍🎓 Students")
@@ -40,47 +42,43 @@ if st.session_state.get("role") == "Admin":
 elif st.session_state.get("role") == "Student":
 
     username = st.session_state.get("username")
+    department = st.session_state.get("department")
 
+    # -------- My Timetable --------
     st.subheader("📅 My Timetable")
 
-    data = get_student_timetable(
-        st.session_state.get("department")
-    )
+    timetable_data = get_student_timetable(department)
 
-    for row in data:
-        st.write(row)
+    if timetable_data:
+        for row in timetable_data:
+            st.write(row)
+    else:
+        st.info("No timetable data for your department.")
 
-    # -------- Attendance Alert --------
-    import plotly.express as px
-from database import get_student_attendance_percentage
+    # -------- My Attendance --------
+    st.divider()
+    st.subheader("📊 My Attendance")
 
-st.divider()
-st.subheader("📊 My Attendance")
+    attendance = get_student_attendance_percentage(username)
 
-username = st.session_state.get("username")
+    if attendance:
 
-attendance = get_student_attendance_percentage(username)
+        subjects = [a[0] for a in attendance]
+        percent = [a[1] for a in attendance]
 
-if attendance:
+        df = pd.DataFrame({
+            "Subject": subjects,
+            "Attendance %": percent,
+        })
 
-    subjects = [a[0] for a in attendance]
-    percent = [a[1] for a in attendance]
+        fig = px.bar(
+            df,
+            x="Subject",
+            y="Attendance %",
+            title="My Attendance Percentage",
+        )
 
-    import pandas as pd
+        st.plotly_chart(fig, use_container_width=True)
 
-    df = pd.DataFrame({
-        "Subject": subjects,
-        "Attendance %": percent
-    })
-
-    fig = px.bar(
-        df,
-        x="Subject",
-        y="Attendance %",
-        title="My Attendance Percentage"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-else:
-    st.info("No attendance data available")
+    else:
+        st.info("No attendance data available.")
